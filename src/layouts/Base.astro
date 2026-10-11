@@ -14,7 +14,7 @@ const ld = {
   legalName: business.legalName,
   description: business.description,
   url: Astro.site.href + base.slice(1) + '/',
-  ...(phone && { telephone: phone }),
+  ...(phone && { telephone: business.phoneIntl || phone }),
   ...(business.address.city && {
     address: {
       '@type': 'PostalAddress',
@@ -64,7 +64,7 @@ const ld = {
     <slot />
     <footer class="site-footer">
       <div class="wrap">
-        <p>© {new Date().getFullYear()} {business.name} — {business.legalName}, SIREN {business.siren} · SIRET {business.siret}</p>
+        <p>© {new Date().getFullYear()} {business.name} — {business.legalName}, SIREN {business.siren}</p>
         <p>{business.address.street}, {business.address.postalCode} {business.address.city}</p>
         <p class="demo">Site de démonstration.</p>
       </div>
