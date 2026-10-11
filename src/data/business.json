@@ -1,0 +1,20 @@
+{
+  "name": "Verny Charpente",
+  "legalName": "VERNY AODREN",
+  "siren": "902240258",
+  "description": "Verny Charpente intervient dans la construction et la rénovation de charpentes en bois, terrasses, couvertures et étanchéité. L’équipe prend en charge la restauration et le traitement des toitures, incluant démoussage, nettoyage de gouttières et chéneaux, ainsi que le traitement anti-champignon. Elle assure la pose et la réparation de couvertures en zinc, fenêtres de toit, bardages et zinguerie. Verny Charpente propose également des services de recherche de fuite, dépannage toiture, rénovation et renforcement de charpentes, garantissant des ouvrages durables et soignés.",
+  "phone": "",
+  "email": "",
+  "address": { "street": "", "postalCode": "", "city": "", "region": "" },
+  "googleMapsUrl": "",
+  "googleReviewUrl": "",
+  "services": [
+    { "title": "Charpente bois", "text": "Construction, rénovation et renforcement de charpentes en bois." },
+    { "title": "Couverture", "text": "Pose et réparation de couvertures, y compris en zinc." },
+    { "title": "Zinguerie", "text": "Zinguerie, gouttières et chéneaux : pose, réparation, nettoyage." },
+    { "title": "Étanchéité & fuites", "text": "Étanchéité, recherche de fuite et dépannage toiture." },
+    { "title": "Traitement des toitures", "text": "Démoussage, nettoyage et traitement anti-champignon." },
+    { "title": "Fenêtres de toit & bardages", "text": "Pose de fenêtres de toit et de bardages." },
+    { "title": "Terrasses bois", "text": "Création de terrasses en bois." }
+  ]
+}

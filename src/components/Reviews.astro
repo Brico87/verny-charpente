@@ -1,0 +1,40 @@
+---
+import google from '../data/google.json';
+import business from '../data/business.json';
+const stars = (n: number) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
+const link = google.mapsUrl || business.googleReviewUrl || business.googleMapsUrl;
+---
+<section id="avis" class="reviews">
+  <div class="wrap">
+    <h2>Avis clients Google</h2>
+    {google.fetched && google.reviews.length > 0 ? (
+      <>
+        <p class="score"><strong>{google.rating?.toFixed(1)}/5</strong> <span class="stars" aria-hidden="true">{stars(google.rating ?? 0)}</span> — {google.total} avis</p>
+        <div class="grid">
+          {google.reviews.map((r) => (
+            <figure class="card">
+              <div class="stars" aria-label={`${r.rating} sur 5`}>{stars(r.rating)}</div>
+              <blockquote>{r.text}</blockquote>
+              <figcaption>{r.author} <small>· {r.when}</small></figcaption>
+            </figure>
+          ))}
+        </div>
+        <p class="note">Avis publiés sur Google, mis à jour à chaque déploiement du site.</p>
+      </>
+    ) : (
+      <p class="empty">Les avis Google s’afficheront ici automatiquement dès que la fiche Google de l’entreprise sera connectée.</p>
+    )}
+    {link && <p><a class="btn" href={link} rel="noopener" target="_blank">Voir / laisser un avis sur Google</a></p>}
+  </div>
+</section>
+<style>
+  .reviews { background: #fff; }
+  .score { font-size: 1.2rem; }
+  .stars { color: #e8a317; letter-spacing: 2px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; margin:20px 0; }
+  .card { margin:0; background:var(--cream); border-radius:10px; padding:18px; border:1px solid #eadfce; }
+  blockquote { margin:.6rem 0; font-style:italic; }
+  figcaption { font-weight:600; }
+  small, .note { color:var(--zinc); font-weight:400; }
+  .empty { color:var(--zinc); }
+</style>

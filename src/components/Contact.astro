@@ -1,0 +1,38 @@
+---
+import google from '../data/google.json';
+import business from '../data/business.json';
+const phone = google.phone || business.phone;
+const phoneHref = (google.phoneIntl || phone || '').replace(/[^+\d]/g, '');
+const address = google.address || [business.address.street, `${business.address.postalCode} ${business.address.city}`.trim()].filter(Boolean).join(', ');
+const hours: string[] = google.hours ?? [];
+const maps = google.mapsUrl || business.googleMapsUrl;
+---
+<section id="contact">
+  <div class="wrap">
+    <h2>Contact</h2>
+    <div class="cols">
+      <div>
+        <p>Un devis, une fuite, un projet de charpente ? Contactez-nous.</p>
+        <ul class="list">
+          {phone && <li>📞 <a href={`tel:${phoneHref}`}>{phone}</a></li>}
+          {business.email && <li>✉️ <a href={`mailto:${business.email}`}>{business.email}</a></li>}
+          {address && <li>📍 {address}</li>}
+          {!phone && !address && <li class="empty">Coordonnées Google à connecter (téléphone, adresse, horaires).</li>}
+        </ul>
+        {maps && <p><a class="btn" href={maps} target="_blank" rel="noopener">Ouvrir sur Google Maps</a></p>}
+      </div>
+      {hours.length > 0 && (
+        <div>
+          <h3>Horaires</h3>
+          <ul class="list">{hours.map((h) => <li>{h}</li>)}</ul>
+        </div>
+      )}
+    </div>
+  </div>
+</section>
+<style>
+  .cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:32px; }
+  .list { list-style:none; padding:0; }
+  .list li { margin:.5rem 0; }
+  .empty { color:var(--zinc); }
+</style>

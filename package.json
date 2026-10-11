@@ -1,0 +1,16 @@
+{
+  "name": "verny-charpente",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "fetch:google": "node scripts/fetch-google.mjs",
+    "dev": "npm run fetch:google && astro dev",
+    "build": "npm run fetch:google && astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.2.1",
+    "astro": "^5.0.0"
+  }
+}

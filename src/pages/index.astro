@@ -1,0 +1,48 @@
+---
+import Base from '../layouts/Base.astro';
+import Reviews from '../components/Reviews.astro';
+import Contact from '../components/Contact.astro';
+import business from '../data/business.json';
+---
+<Base title="Verny Charpente — Charpentier, couvreur, zingueur" description={business.description.slice(0, 155) + '…'}>
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <h1>Charpente, couverture &amp; zinguerie</h1>
+        <p>Des ouvrages durables et soignés, de la construction à la rénovation de votre toiture.</p>
+        <p><a class="btn" href="#contact">Demander un devis</a> <a class="btn ghost" href="#services">Nos services</a></p>
+      </div>
+    </section>
+
+    <section id="presentation">
+      <div class="wrap narrow">
+        <h2>Verny Charpente</h2>
+        <p>{business.description}</p>
+      </div>
+    </section>
+
+    <section id="services" class="alt">
+      <div class="wrap">
+        <h2>Nos services</h2>
+        <div class="grid">
+          {business.services.map((s) => (
+            <article class="card"><h3>{s.title}</h3><p>{s.text}</p></article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <Reviews />
+    <Contact />
+  </main>
+</Base>
+<style>
+  .hero { background: linear-gradient(135deg, var(--wood-dark), #2b2118); color:#fff; padding: 110px 0; }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.4rem); margin:0 0 .6rem; }
+  .hero p { font-size:1.15rem; max-width: 620px; }
+  .narrow { max-width: 760px; }
+  .alt { background:#f1e8da; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; }
+  .card { background:#fff; border-radius:10px; padding:20px; border-left:4px solid var(--wood); }
+  .card h3 { margin-top:0; }
+</style>
