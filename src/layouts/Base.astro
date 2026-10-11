@@ -24,6 +24,8 @@ const ld = {
       addressCountry: 'FR',
     },
   }),
+  ...(business.openingHoursSpec && { openingHours: business.openingHoursSpec }),
+  ...(business.areaServed && { areaServed: business.areaServed }),
   ...(google.rating && {
     aggregateRating: { '@type': 'AggregateRating', ratingValue: google.rating, reviewCount: google.total },
   }),
@@ -62,7 +64,8 @@ const ld = {
     <slot />
     <footer class="site-footer">
       <div class="wrap">
-        <p>© {new Date().getFullYear()} {business.name} — {business.legalName}, SIREN {business.siren}</p>
+        <p>© {new Date().getFullYear()} {business.name} — {business.legalName}, SIREN {business.siren} · SIRET {business.siret}</p>
+        <p>{business.address.street}, {business.address.postalCode} {business.address.city}</p>
         <p class="demo">Site de démonstration.</p>
       </div>
     </footer>

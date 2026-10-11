@@ -4,8 +4,8 @@ import business from '../data/business.json';
 const phone = google.phone || business.phone;
 const phoneHref = (google.phoneIntl || phone || '').replace(/[^+\d]/g, '');
 const address = google.address || [business.address.street, `${business.address.postalCode} ${business.address.city}`.trim()].filter(Boolean).join(', ');
-const hours: string[] = google.hours ?? [];
-const maps = google.mapsUrl || business.googleMapsUrl;
+const hours: string[] = google.hours?.length ? google.hours : (business.hours ?? []);
+const maps = business.googleMapsUrl || google.mapsUrl || (address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Verny Charpente ' + address)}` : '');
 ---
 <section id="contact">
   <div class="wrap">
