@@ -19,4 +19,4 @@ raccordé aux tuiles environnantes. Le zinc assure une étanchéité durable et 
 - une bonne tenue dans le temps ;
 - un rendu net, adapté aux toitures en tuiles.
 
-Vous avez un projet de fenêtre de toit ou une infiltration à traiter ? [Contactez-nous](../#contact) pour un devis.
+Vous avez un projet de fenêtre de toit ou une infiltration à traiter ? [Contactez-nous](../../#contact) pour un devis.

@@ -2,7 +2,7 @@
 // rédigé en s'appuyant sur les chantiers réels du portfolio.
 import { readFileSync, readdirSync } from 'node:fs';
 import { generate } from './lib/llm.mjs';
-import { slugify, uniqueSlug, readMarkdown, writeMarkdown, setOutput, clip, STYLE_RULES } from './lib/content.mjs';
+import { slugify, uniqueSlug, readMarkdown, writeMarkdown, setOutput, clip, withClosing, STYLE_RULES, CLOSING_RULE } from './lib/content.mjs';
 
 const event = process.env.GITHUB_EVENT_PATH ? JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')) : {};
 const topic = clip(event.client_payload?.topic, 300) || clip(process.env.TOPIC, 300);
@@ -23,14 +23,14 @@ const prompt = `Sujet : ${topic}
 Chantiers récents de l'entreprise :
 ${context || '(aucun)'}
 
-Réponds en JSON strict avec les clés : title (70 car. max), description (160 car. max), body (Markdown, sans le titre H1).`;
+Réponds en JSON strict avec les clés : title (70 car. max), description (160 car. max), body (Markdown, sans le titre H1 ni phrase de contact finale),\n${CLOSING_RULE}`;
 const r = await generate({ system, prompt, json: true });
 
 const today = new Date().toISOString().slice(0, 10);
 const title = clip(r.title, 90) || topic;
 const slug = uniqueSlug('src/content/blog', slugify(title));
 const file = `src/content/blog/${slug}.md`;
-writeMarkdown(file, { title, description: clip(r.description, 170) || title, date: today, category: 'Conseil' }, String(r.body ?? ''));
+writeMarkdown(file, { title, description: clip(r.description, 170) || title, date: today, category: 'Conseil' }, withClosing(r.body, r.closing));
 
 console.log(`[blog] ${file}`);
 setOutput('slug', slug);

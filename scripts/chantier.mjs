@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
 import { downloadFile } from './lib/telegram.mjs';
 import { generate, transcribe } from './lib/llm.mjs';
-import { slugify, uniqueSlug, writeMarkdown, setOutput, cleanList, clip, STYLE_RULES } from './lib/content.mjs';
+import { slugify, uniqueSlug, writeMarkdown, setOutput, cleanList, clip, withClosing, STYLE_RULES, CLOSING_RULE } from './lib/content.mjs';
 
 const MAX_PHOTOS = 8;
 const p = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')).client_payload ?? {};
@@ -39,7 +39,8 @@ Réponds en JSON strict avec les clés :
 - city : ville ou secteur si cité dans les notes, sinon ""
 - services : liste de prestations (ex. "Couverture ardoise", "Zinguerie")
 - materials : liste de matériaux visibles ou cités, sinon []
-- body : texte Markdown de 100 à 220 mots (sous-titres ## autorisés) décrivant le chantier : contexte, travaux, résultat
+- body : texte Markdown de 100 à 220 mots (sous-titres ## autorisés) décrivant le chantier : contexte, travaux, résultat (sans phrase de contact : elle va dans closing)
+${CLOSING_RULE}
 - alts : tableau de ${full.length} textes alternatifs (une phrase descriptive par photo, dans l'ordre)`;
 const r = await generate({ system, prompt, images: small, json: true });
 
@@ -63,7 +64,7 @@ const data = {
   images,
 };
 const file = `src/content/chantiers/${slug}.md`;
-writeMarkdown(file, data, String(r.body ?? ''));
+writeMarkdown(file, data, withClosing(r.body, r.closing));
 console.log(`[chantier] ${file} (${images.length} photos)`);
 setOutput('slug', slug);
 setOutput('file', file);
