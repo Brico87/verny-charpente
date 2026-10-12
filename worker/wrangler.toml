@@ -12,4 +12,4 @@ GITHUB_REPO = "Brico87/verny-charpente"
 # wrangler kv namespace create STATE  →  coller l'identifiant ci-dessous
 [[kv_namespaces]]
 binding = "STATE"
-id = "REMPLACER_PAR_L_ID_KV"
+id = "c6ec5a8bda4d4ebaae9387f082447f32"

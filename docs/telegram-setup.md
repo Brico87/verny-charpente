@@ -43,28 +43,23 @@ Réglage du dépôt : Settings → Actions → General → **Allow GitHub Action
 | `MISTRAL_API_KEY` | console.mistral.ai | secours (facultatif) |
 | `OPENROUTER_API_KEY` | openrouter.ai | dernier recours (facultatif) |
 
-### 4. Secrets du dépôt (Settings → Secrets and variables → Actions)
-`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GEMINI_API_KEY`, `GROQ_API_KEY`, et si utilisés `MISTRAL_API_KEY`, `OPENROUTER_API_KEY`.
-
-### 5. Worker Cloudflare
+### 4. Remplir `.env` (à la racine)
 ```bash
-cd worker
-npx wrangler kv namespace create STATE        # coller l'id obtenu dans wrangler.toml
-npx wrangler secret put TELEGRAM_BOT_TOKEN
-npx wrangler secret put TELEGRAM_WEBHOOK_SECRET   # chaîne aléatoire de votre choix
-npx wrangler secret put GITHUB_TOKEN
-npx wrangler secret put ALLOWED_USER_IDS
-npx wrangler deploy                             # affiche l'URL du Worker
+cp .env.example .env     # .env est ignoré par git
 ```
+Renseigner les valeurs (token du bot, jeton GitHub, clés LLM…). `.env.example` indique pour chaque variable où elle est envoyée (Worker Cloudflare, GitHub Actions) ; une valeur vide est ignorée.
 
-### 6. Brancher le webhook Telegram
-Remplacer les valeurs entre chevrons (ne jamais coller le token dans un fichier du dépôt) :
+### 5. Tout configurer d'un coup
 ```bash
-curl "https://api.telegram.org/bot<TOKEN>/setWebhook" \
-  -d "url=https://<votre-worker>.workers.dev/telegram" \
-  -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>" \
-  -d 'allowed_updates=["message","callback_query"]'
+(cd worker && npx wrangler kv namespace create STATE)   # une fois : coller l'id dans worker/wrangler.toml
+./setup_secrets.sh
 ```
+Le script (relançable, `DRY_RUN=1` pour simuler) se connecte à Cloudflare et GitHub si besoin, puis :
+1. déploie le Worker ; 2. envoie ses secrets ; 3. envoie les secrets GitHub Actions ;
+4. autorise les Actions à créer des pull requests ; 5. branche le webhook Telegram.
+
+L'URL du webhook vient de `WORKER_URL` dans `.env` ; si elle est vide, le script la lit dans la sortie du déploiement.
+Les valeurs transitent par l'entrée standard : jamais dans la ligne de commande ni dans l'historique du shell.
 
 ### 7. Tester
 Envoyer `/start` au bot, puis une photo avec une légende. Compter 20 secondes (regroupement des photos), puis 1 à 3 minutes (Actions).
