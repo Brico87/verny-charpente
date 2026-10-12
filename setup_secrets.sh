@@ -14,6 +14,7 @@ cd "$(dirname "$0")"
 
 REPO="Brico87/verny-charpente"
 ENV_FILE="${ENV_FILE:-.env}"
+[[ "$ENV_FILE" = /* ]] || ENV_FILE="$PWD/$ENV_FILE"   # chemin absolu : get() est aussi appelée depuis worker/
 DRY_RUN="${DRY_RUN:-0}"
 REQUIRED=(TELEGRAM_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET GITHUB_TOKEN ALLOWED_USER_IDS TELEGRAM_CHAT_ID GEMINI_API_KEY GROQ_API_KEY)
 WORKER_SECRETS=(TELEGRAM_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET GITHUB_TOKEN ALLOWED_USER_IDS)
@@ -42,7 +43,7 @@ grep -q REMPLACER_PAR worker/wrangler.toml && { echo "✗ worker/wrangler.toml :
 
 # 1. Déploiement du Worker (crée le Worker, nécessaire avant d'y mettre des secrets)
 echo "▶ 1/5 Déploiement du Worker Cloudflare"
-URL="$(get WORKER_URL)"; URL="${URL%/}"
+URL="$(get WORKER_URL)"; URL="${URL%/}"; URL="${URL%/telegram}"   # tolère l'URL complète du webhook
 if [[ "$DRY_RUN" == "1" ]]; then echo "  (simulation) wrangler deploy"; URL="${URL:-https://verny-telegram.example.workers.dev}"
 else
   out=$(cd worker && npx wrangler deploy 2>&1) || { echo "$out" >&2; exit 1; }
@@ -57,7 +58,9 @@ echo "  ✓ $URL"
 echo "▶ 2/5 Secrets du Worker Cloudflare"
 for name in "${WORKER_SECRETS[@]}"; do
   if [[ "$DRY_RUN" == "1" ]]; then echo "  ✓ $name (simulation)"; continue; fi
-  (cd worker && printf '%s' "$(get "$name")" | npx wrangler secret put "$name" >/dev/null) && echo "  ✓ $name"
+  value="$(get "$name")"   # lu avant le cd worker
+  [[ -n "$value" ]] || { echo "  ✗ $name vide" >&2; exit 1; }
+  (cd worker && printf '%s' "$value" | npx wrangler secret put "$name" >/dev/null) && echo "  ✓ $name"
 done
 
 # 3. Secrets GitHub Actions
