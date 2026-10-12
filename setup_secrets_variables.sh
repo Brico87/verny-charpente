@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Configure tout d'un coup à partir du fichier .env :
-#   1. déploie le Worker Cloudflare        4. autorise les Actions à créer des pull requests
-#   2. envoie ses secrets (Cloudflare)     5. branche le webhook Telegram sur le Worker
-#   3. envoie les secrets GitHub Actions
+# Configure tout d'un coup : secrets (depuis .env) et variables (définies ci-dessous).
+#   1. déploie le Worker Cloudflare              4. définit les variables GitHub Actions (VARIABLES)
+#   2. envoie ses secrets (Cloudflare)           5. autorise les Actions à créer des pull requests
+#   3. envoie les secrets GitHub Actions         6. branche le webhook Telegram sur le Worker
 #
 #   cp .env.example .env   # remplir, puis :
-#   ./setup_secrets.sh
+#   ./setup_secrets_variables.sh
 #
-# DRY_RUN=1 ./setup_secrets.sh   simule sans rien envoyer ni déployer.
+# DRY_RUN=1 ./setup_secrets_variables.sh   simule sans rien envoyer ni déployer.
 # Relançable à volonté. Les valeurs passent par l'entrée standard (jamais dans la ligne de commande).
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -19,6 +19,10 @@ DRY_RUN="${DRY_RUN:-0}"
 REQUIRED=(TELEGRAM_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET GITHUB_TOKEN ALLOWED_USER_IDS TELEGRAM_CHAT_ID GEMINI_API_KEY GROQ_API_KEY)
 WORKER_SECRETS=(TELEGRAM_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET GITHUB_TOKEN ALLOWED_USER_IDS)
 GITHUB_SECRETS=(TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID GEMINI_API_KEY GROQ_API_KEY MISTRAL_API_KEY OPENROUTER_API_KEY GOOGLE_PLACES_API_KEY GOOGLE_PLACE_ID)
+# Variables non secrètes, lues par les workflows via ${{ vars.NOM }} : modifier ici puis relancer le script.
+VARIABLES=(
+  "GEMINI_MODEL=gemini-3.5-flash-lite"   # modèle Gemini (vision + rédaction) ; défaut du code si absent : gemini-2.5-flash
+)
 
 [[ -f "$ENV_FILE" ]] || { echo "✗ $ENV_FILE introuvable : cp .env.example .env puis remplir." >&2; exit 1; }
 
@@ -42,7 +46,7 @@ fi
 grep -q REMPLACER_PAR worker/wrangler.toml && { echo "✗ worker/wrangler.toml : renseigner l'id KV (cd worker && npx wrangler kv namespace create STATE)." >&2; exit 1; }
 
 # 1. Déploiement du Worker (crée le Worker, nécessaire avant d'y mettre des secrets)
-echo "▶ 1/5 Déploiement du Worker Cloudflare"
+echo "▶ 1/6 Déploiement du Worker Cloudflare"
 URL="$(get WORKER_URL)"; URL="${URL%/}"; URL="${URL%/telegram}"   # tolère l'URL complète du webhook
 if [[ "$DRY_RUN" == "1" ]]; then echo "  (simulation) wrangler deploy"; URL="${URL:-https://verny-telegram.example.workers.dev}"
 else
@@ -55,7 +59,7 @@ fi
 echo "  ✓ $URL"
 
 # 2. Secrets du Worker
-echo "▶ 2/5 Secrets du Worker Cloudflare"
+echo "▶ 2/6 Secrets du Worker Cloudflare"
 for name in "${WORKER_SECRETS[@]}"; do
   if [[ "$DRY_RUN" == "1" ]]; then echo "  ✓ $name (simulation)"; continue; fi
   value="$(get "$name")"   # lu avant le cd worker
@@ -64,7 +68,7 @@ for name in "${WORKER_SECRETS[@]}"; do
 done
 
 # 3. Secrets GitHub Actions
-echo "▶ 3/5 Secrets GitHub Actions ($REPO)"
+echo "▶ 3/6 Secrets GitHub Actions ($REPO)"
 for name in "${GITHUB_SECRETS[@]}"; do
   value="$(get "$name")"
   if [[ -z "$value" ]]; then echo "  – $name : vide, ignoré"; continue; fi
@@ -72,16 +76,24 @@ for name in "${GITHUB_SECRETS[@]}"; do
   printf '%s' "$value" | gh secret set "$name" --repo "$REPO" >/dev/null && echo "  ✓ $name"
 done
 
-# 4. Réglage du dépôt : les Actions peuvent créer des pull requests
-echo "▶ 4/5 Autoriser les Actions à créer des pull requests"
+# 4. Variables GitHub Actions
+echo "▶ 4/6 Variables GitHub Actions ($REPO)"
+for entry in "${VARIABLES[@]}"; do
+  name="${entry%%=*}"; value="${entry#*=}"
+  if [[ "$DRY_RUN" == "1" ]]; then echo "  ✓ $name=$value (simulation)"; continue; fi
+  gh variable set "$name" --repo "$REPO" --body "$value" >/dev/null && echo "  ✓ $name=$value"
+done
+
+# 5. Réglage du dépôt : les Actions peuvent créer des pull requests
+echo "▶ 5/6 Autoriser les Actions à créer des pull requests"
 if [[ "$DRY_RUN" == "1" ]]; then echo "  (simulation)"
 else
   gh api -X PUT "repos/$REPO/actions/permissions/workflow" -f default_workflow_permissions=read -F can_approve_pull_request_reviews=true >/dev/null \
     && echo "  ✓ activé" || echo "  ⚠ échec : le faire à la main (Settings → Actions → General → Allow GitHub Actions to create and approve pull requests)"
 fi
 
-# 5. Webhook Telegram (le token est lu sur stdin pour ne pas apparaître dans la liste des processus)
-echo "▶ 5/5 Webhook Telegram → $URL/telegram"
+# 6. Webhook Telegram (le token est lu sur stdin pour ne pas apparaître dans la liste des processus)
+echo "▶ 6/6 Webhook Telegram → $URL/telegram"
 if [[ "$DRY_RUN" == "1" ]]; then echo "  (simulation)"
 else
   printf 'url = "https://api.telegram.org/bot%s/setWebhook"\n' "$(get TELEGRAM_BOT_TOKEN)" | curl -sS -K - \

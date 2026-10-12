@@ -52,14 +52,16 @@ Renseigner les valeurs (token du bot, jeton GitHub, clés LLM…). `.env.example
 ### 5. Tout configurer d'un coup
 ```bash
 (cd worker && npx wrangler kv namespace create STATE)   # une fois : coller l'id dans worker/wrangler.toml
-./setup_secrets.sh
+./setup_secrets_variables.sh
 ```
 Le script (relançable, `DRY_RUN=1` pour simuler) se connecte à Cloudflare et GitHub si besoin, puis :
 1. déploie le Worker ; 2. envoie ses secrets ; 3. envoie les secrets GitHub Actions ;
-4. autorise les Actions à créer des pull requests ; 5. branche le webhook Telegram.
+4. définit les variables GitHub Actions ; 5. autorise les Actions à créer des pull requests ; 6. branche le webhook Telegram.
 
 L'URL du webhook vient de `WORKER_URL` dans `.env` ; si elle est vide, le script la lit dans la sortie du déploiement.
 Les valeurs transitent par l'entrée standard : jamais dans la ligne de commande ni dans l'historique du shell.
+
+Modèle Gemini (variable non secrète) : `GEMINI_MODEL` est défini dans la liste `VARIABLES` de `./setup_secrets_variables.sh` (défaut du code si absente : `gemini-2.5-flash`). Modifier la valeur dans le script, puis le relancer.
 
 ### 7. Tester
 Envoyer `/start` au bot, puis une photo avec une légende. Compter 20 secondes (regroupement des photos), puis 1 à 3 minutes (Actions).
