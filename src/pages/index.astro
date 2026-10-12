@@ -2,7 +2,12 @@
 import Base from '../layouts/Base.astro';
 import Reviews from '../components/Reviews.astro';
 import Contact from '../components/Contact.astro';
+import PostCard from '../components/PostCard.astro';
+import { getCollection } from 'astro:content';
 import business from '../data/business.json';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const chantiers = (await getCollection('chantiers', (p) => !p.data.draft)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()).slice(0, 3);
+const posts = (await getCollection('blog', (p) => !p.data.draft)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()).slice(0, 3);
 ---
 <Base title="Verny Charpente — Charpentier, couvreur, zingueur" description={business.description.slice(0, 155) + '…'}>
   <main>
@@ -33,15 +38,32 @@ import business from '../data/business.json';
       </div>
     </section>
 
-    <section id="realisation">
-      <div class="wrap narrow">
-        <h2>Dernière réalisation</h2>
-        <article class="card work">
-          <img src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/images/velux-zinc.jpg`} alt="Fenêtre de toit Velux avec entourage zinc posée sur une toiture en tuiles canal" width="450" height="800" loading="lazy" />
-          <div><h3>{business.latestWork.title}</h3><p>{business.latestWork.text}</p></div>
-        </article>
-      </div>
-    </section>
+    {chantiers.length > 0 && (
+      <section id="realisations">
+        <div class="wrap">
+          <h2>Nos dernières réalisations</h2>
+          <div class="grid">
+            {chantiers.map((p) => (
+              <PostCard href={`/realisations/${p.id}/`} title={p.data.title} description={p.data.description} date={p.data.date}
+                label={p.data.city} image={p.data.images[0]?.src} imageAlt={p.data.images[0]?.alt} />
+            ))}
+          </div>
+          <p><a href={`${base}/realisations/`}>Voir toutes les réalisations →</a></p>
+        </div>
+      </section>
+    )}
+
+    {posts.length > 0 && (
+      <section id="conseils" class="alt">
+        <div class="wrap">
+          <h2>Conseils</h2>
+          <div class="grid">
+            {posts.map((p) => <PostCard href={`/blog/${p.id}/`} title={p.data.title} description={p.data.description} date={p.data.date} label={p.data.category} image={p.data.image} imageAlt={p.data.imageAlt} />)}
+          </div>
+          <p><a href={`${base}/blog/`}>Voir tous les conseils →</a></p>
+        </div>
+      </section>
+    )}
 
     <Reviews />
     <Contact />

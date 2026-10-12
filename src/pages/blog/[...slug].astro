@@ -1,0 +1,34 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', (p) => !p.data.draft);
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+const { post } = Astro.props;
+const { Content } = await render(post);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const fmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+const d = post.data;
+---
+<Base title={`${d.title} — Verny Charpente`} description={d.description}>
+  <main>
+    <article class="wrap narrow">
+      <p><a href={`${base}/blog/`}>← Tous les conseils</a></p>
+      <p class="meta">{d.category} · <time datetime={d.date.toISOString()}>{fmt.format(d.date)}</time></p>
+      <h1>{d.title}</h1>
+      {d.image && <img class="cover" src={`${base}/${d.image}`} alt={d.imageAlt ?? ''} />}
+      <div class="prose"><Content /></div>
+      <p class="cta"><a class="btn" href={`${base}/#contact`}>Demander un devis</a></p>
+    </article>
+  </main>
+</Base>
+<style>
+  article { padding: 48px 20px; }
+  .narrow { max-width: 760px; }
+  .meta { color:var(--zinc); margin:.5rem 0; }
+  h1 { margin:.2rem 0 1rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+  .cover { width:100%; max-height:520px; object-fit:cover; border-radius:10px; margin:0 0 1.5rem; }
+  .prose :global(h2) { margin-top:2rem; font-size:1.4rem; }
+  .cta { margin-top:2.5rem; }
+</style>

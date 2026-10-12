@@ -1,0 +1,84 @@
+name: Chantier (Telegram)
+# Déclenché par le Worker Cloudflare (repository_dispatch) : nouveau chantier ou correction d'un brouillon.
+on:
+  repository_dispatch:
+    types: [chantier, chantier_fix]
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: chantier-${{ github.event.client_payload.chat_id }}
+  cancel-in-progress: false
+env:
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  GH_TOKEN: ${{ github.token }}
+  CHAT_ID: ${{ github.event.client_payload.chat_id }}
+jobs:
+  new:
+    if: github.event.action == 'chantier'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - id: gen
+        run: node scripts/chantier.mjs
+      - name: Branche et pull request
+        id: pr
+        env:
+          BRANCH: ${{ steps.gen.outputs.branch }}
+          TITLE: ${{ steps.gen.outputs.title }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add src/content public/images
+          git commit -m "Chantier : $TITLE"
+          git push -u origin "$BRANCH"
+          url=$(gh pr create --base main --head "$BRANCH" --title "Chantier : $TITLE" --body "Brouillon généré depuis Telegram. Relire le texte et les photos avant de publier.")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "number=$(gh pr view "$url" --json number -q .number)" >> "$GITHUB_OUTPUT"
+      - run: node scripts/notify.mjs
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+          FILE: ${{ steps.gen.outputs.file }}
+  fix:
+    if: github.event.action == 'chantier_fix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Récupérer la branche du brouillon
+        id: br
+        env:
+          PR: ${{ github.event.client_payload.pr }}
+        run: |
+          [[ "$PR" =~ ^[0-9]+$ ]] || { echo "numéro de PR invalide"; exit 1; }
+          gh pr checkout "$PR"
+          file=$(git diff --name-only origin/main...HEAD -- 'src/content/chantiers/*.md' 'src/content/blog/*.md' | head -1)
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "url=$(gh pr view "$PR" --json url -q .url)" >> "$GITHUB_OUTPUT"
+      - run: npm ci
+      - run: node scripts/revise.mjs
+        env:
+          FILE: ${{ steps.br.outputs.file }}
+      - name: Pousser la correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A src/content
+          git commit -m "Correction demandée depuis Telegram" || echo "rien à corriger"
+          git push
+      - run: node scripts/notify.mjs
+        env:
+          PR_NUMBER: ${{ github.event.client_payload.pr }}
+          PR_URL: ${{ steps.br.outputs.url }}
+          FILE: ${{ steps.br.outputs.file }}

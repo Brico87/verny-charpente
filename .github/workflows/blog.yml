@@ -1,0 +1,54 @@
+name: Article de blog
+# Uniquement à la demande : /sujet <idée> sur Telegram (repository_dispatch) ou lancement manuel.
+on:
+  repository_dispatch:
+    types: [blog_topic]
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: Sujet de l'article
+        required: true
+permissions:
+  contents: write
+  pull-requests: write
+env:
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  GH_TOKEN: ${{ github.token }}
+  CHAT_ID: ${{ github.event.client_payload.chat_id || secrets.TELEGRAM_CHAT_ID }}
+  TOPIC: ${{ github.event.inputs.topic }}
+jobs:
+  blog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - id: gen
+        run: node scripts/blog.mjs
+      - name: Branche et pull request
+        if: steps.gen.outputs.skip != 'true'
+        id: pr
+        env:
+          BRANCH: ${{ steps.gen.outputs.branch }}
+          TITLE: ${{ steps.gen.outputs.title }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A src/content
+          git commit -m "Article : $TITLE"
+          git push -u origin "$BRANCH"
+          url=$(gh pr create --base main --head "$BRANCH" --title "Article : $TITLE" --body "Brouillon d'article. Relire attentivement : aucun fait ne doit être inventé.")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "number=$(gh pr view "$url" --json number -q .number)" >> "$GITHUB_OUTPUT"
+      - if: steps.gen.outputs.skip != 'true' && env.CHAT_ID != ''
+        run: node scripts/notify.mjs
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+          FILE: ${{ steps.gen.outputs.file }}

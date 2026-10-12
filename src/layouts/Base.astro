@@ -1,9 +1,12 @@
 ---
 import business from '../data/business.json';
 import google from '../data/google.json';
+import { getCollection } from 'astro:content';
 interface Props { title: string; description: string }
 const { title, description } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const hasPosts = (await getCollection('blog', (p) => !p.data.draft)).length > 0;
+const hasWork = (await getCollection('chantiers', (p) => !p.data.draft)).length > 0;
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const phone = google.phone || business.phone;
 const address = google.address || [business.address.street, business.address.postalCode, business.address.city].filter(Boolean).join(', ');
@@ -55,9 +58,11 @@ const ld = {
       <div class="wrap bar">
         <a class="brand" href={`${base}/`} aria-label="Verny Charpente — accueil"><img src={`${base}/favicon.jpg`} alt="Verny Charpente" /></a>
         <nav>
-          <a href="#services">Services</a>
-          <a href="#avis">Avis</a>
-          <a href="#contact" class="btn small">Contact</a>
+          <a href={`${base}/#services`}>Services</a>
+          {hasWork && <a href={`${base}/realisations/`}>Réalisations</a>}
+          {hasPosts && <a href={`${base}/blog/`}>Conseils</a>}
+          <a href={`${base}/#avis`}>Avis</a>
+          <a href={`${base}/#contact`} class="btn small">Contact</a>
         </nav>
       </div>
     </header>

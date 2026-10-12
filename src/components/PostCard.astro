@@ -1,0 +1,26 @@
+---
+interface Props { href: string; title: string; description: string; date: Date; label?: string; image?: string; imageAlt?: string }
+const { href, title, description, date, label, image, imageAlt } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const fmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+---
+<article class="post">
+  {image && <a href={`${base}${href}`} tabindex="-1" aria-hidden="true"><img src={`${base}/${image}`} alt={imageAlt ?? ''} loading="lazy" /></a>}
+  <div class="body">
+    <p class="meta">{label && <><span class="cat">{label}</span> · </>}<time datetime={date.toISOString()}>{fmt.format(date)}</time></p>
+    <h3><a href={`${base}${href}`}>{title}</a></h3>
+    <p>{description}</p>
+  </div>
+</article>
+<style>
+  .post { background:#fff; border-radius:10px; overflow:hidden; border-left:4px solid var(--wood); display:flex; flex-direction:column; }
+  .post img { width:100%; height:200px; object-fit:cover; display:block; }
+  .body { padding:18px 20px 22px; }
+  .meta { margin:0 0 .4rem; font-size:.85rem; color:var(--zinc); }
+  .cat { font-weight:700; color:var(--wood-dark); }
+  h3 { margin:.2rem 0 .5rem; }
+  h3 a { color:var(--ink); text-decoration:none; }
+  h3 a:hover { text-decoration:underline; }
+  p { margin:0; }
+  .meta { margin-bottom:.4rem; }
+</style>

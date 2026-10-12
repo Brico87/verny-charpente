@@ -1,5 +1,8 @@
 node_modules
 dist
 .astro
-.env
+
 src/data/google.json
+.env*
+worker/.dev.vars
+worker/.wrangler
