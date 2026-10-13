@@ -4,7 +4,8 @@
 // Secrets : TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, GITHUB_TOKEN (PAT), ALLOWED_USER_IDS
 // Variable : GITHUB_REPO ("owner/repo")   KV : STATE
 
-const BATCH_WAIT_MS = 20_000; // délai sans nouveau message avant de lancer le chantier
+const DEFAULT_BATCH_WAIT_MS = 20_000; // délai sans nouveau message avant de lancer le chantier
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const HELP = `Bonjour ! Envoyez-moi :
 📷 les photos d'un chantier (+ une légende ou un vocal pour décrire les travaux) → je prépare une fiche à valider ;
@@ -72,7 +73,7 @@ async function onCallback(env, cb) {
   }
 }
 
-async function onMessage(env, msg) {
+async function onMessage(env, msg, ctx) {
   const chat = msg.chat?.id;
   if (!chat) return;
   if (!allowed(env, msg.from?.id)) return; // silence pour les inconnus
@@ -105,23 +106,24 @@ async function onMessage(env, msg) {
   batch.last = Date.now();
   await env.STATE.put(key, JSON.stringify(batch), { expirationTtl: 3600 });
   if (batch.photos.length + batch.voices.length + batch.texts.length === 1) await say(env, chat, '👍 Bien reçu, j’attends la suite (photos, note) avant de lancer.');
+  // Pas de tâche planifiée : ce message attend en arrière-plan, puis lance le chantier si rien de plus récent n'est arrivé.
+  ctx.waitUntil(flushWhenIdle(env, chat).catch((e) => console.error('flush', e)));
 }
 
-// Appelé chaque minute : lance les envois sans nouveau message depuis BATCH_WAIT_MS
-async function flush(env) {
-  const { keys } = await env.STATE.list({ prefix: 'batch:' });
-  for (const { name } of keys) {
-    const batch = JSON.parse((await env.STATE.get(name)) ?? 'null');
-    if (!batch || Date.now() - batch.last < BATCH_WAIT_MS) continue;
-    await env.STATE.delete(name);
-    const chat = Number(name.slice('batch:'.length));
-    if (batch.photos.length === 0) {
-      await say(env, chat, '📷 Il me faut au moins une photo pour créer une fiche chantier. Renvoyez les photos avec une courte description.');
-      continue;
-    }
-    const res = await dispatch(env, 'chantier', { chat_id: chat, photos: batch.photos, voices: batch.voices, texts: batch.texts });
-    await say(env, chat, res.ok ? `⚙️ Je prépare la fiche (${batch.photos.length} photo(s)) : aperçu dans quelques minutes.` : `⚠️ Impossible de lancer la préparation (${res.status}).`);
+// Lance l'envoi de `chat` s'il est resté sans nouveau message pendant le délai de regroupement.
+// Chaque message programme son propre contrôle : seul celui du dernier message trouve le lot assez ancien.
+async function flushWhenIdle(env, chat) {
+  const wait = Number(env.BATCH_WAIT_MS) || DEFAULT_BATCH_WAIT_MS;
+  await sleep(wait + 500);
+  const key = `batch:${chat}`;
+  const batch = JSON.parse((await env.STATE.get(key)) ?? 'null');
+  if (!batch || Date.now() - batch.last < wait) return;
+  await env.STATE.delete(key);
+  if (batch.photos.length === 0) {
+    return void (await say(env, chat, '📷 Il me faut au moins une photo pour créer une fiche chantier. Renvoyez les photos avec une courte description.'));
   }
+  const res = await dispatch(env, 'chantier', { chat_id: chat, photos: batch.photos, voices: batch.voices, texts: batch.texts });
+  await say(env, chat, res.ok ? `⚙️ Je prépare la fiche (${batch.photos.length} photo(s)) : aperçu dans quelques minutes.` : `⚠️ Impossible de lancer la préparation (${res.status}).`);
 }
 
 export default {
@@ -131,11 +133,8 @@ export default {
     if (!safeEqual(request.headers.get('X-Telegram-Bot-Api-Secret-Token') ?? '', env.TELEGRAM_WEBHOOK_SECRET ?? '\0')) return new Response('Forbidden', { status: 403 });
     const update = await request.json().catch(() => null);
     if (!update) return new Response('Bad request', { status: 400 });
-    const work = update.callback_query ? onCallback(env, update.callback_query) : update.message ? onMessage(env, update.message) : null;
+    const work = update.callback_query ? onCallback(env, update.callback_query) : update.message ? onMessage(env, update.message, ctx) : null;
     if (work) ctx.waitUntil(work.catch((e) => console.error('handler', e)));
     return new Response('ok');
-  },
-  async scheduled(_event, env, ctx) {
-    ctx.waitUntil(flush(env).catch((e) => console.error('flush', e)));
   },
 };

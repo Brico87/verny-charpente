@@ -2,9 +2,6 @@ name = "verny-telegram"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
 
-[triggers]
-crons = ["* * * * *"]   # regroupe les photos d'un même envoi puis déclenche le workflow
-
 [vars]
 GITHUB_REPO = "Brico87/verny-charpente"
 # ALLOWED_USER_IDS = "123456789,987654321"  → à définir : wrangler secret put ALLOWED_USER_IDS
